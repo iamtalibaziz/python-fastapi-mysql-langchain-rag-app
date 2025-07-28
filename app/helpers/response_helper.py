@@ -26,6 +26,16 @@ def error_response(message, status_code=status.HTTP_400_BAD_REQUEST, errors=None
         content=response
     )
 
+def validation_error_response(errors):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "success": False,
+            "message": "Validation error",
+            "errors": errors
+        }
+    )
+
 def internal_server_error_response():
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

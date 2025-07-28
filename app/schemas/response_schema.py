@@ -35,3 +35,15 @@ class SuccessOnlyResponse(BaseModel):
 class SuccessWithIdOnlyResponse(BaseModel):
     success: bool = True
     id: int
+
+
+class ErrorResponse(BaseModel):
+    success: bool = False
+    message: str
+
+
+class ValidationErrorResponse(BaseModel):
+    success: bool = False
+    message: str
+    errors: List[str] | None = None
+
