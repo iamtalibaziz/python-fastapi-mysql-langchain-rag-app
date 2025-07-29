@@ -45,3 +45,13 @@ class UserUpdate(BaseModel):
     first_name: str | None = Field(None, min_length=1, error_messages={"min_length": "First name cannot be empty"})
     last_name: str | None = Field(None, min_length=1, error_messages={"min_length": "Last name cannot be empty"})
     email: str | None = Field(None, min_length=1, error_messages={"min_length": "Email cannot be empty"})
+
+class SignInResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: User
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(..., min_length=1, error_messages={"min_length": "Old password cannot be empty"})
+    new_password: str = Field(..., min_length=1, error_messages={"min_length": "New password cannot be empty"})

@@ -52,3 +52,8 @@ def authenticate_user(db: Session, email: str, password: str):
     if not verify_password(password, user.hashed_password):
         raise CustomException(message="Incorrect email or password", status_code=status.HTTP_401_UNAUTHORIZED)
     return user
+
+def change_password(db: Session, user: user_schema.User, old_password: str, new_password: str):
+    if not verify_password(old_password, user.hashed_password):
+        raise CustomException(message="Incorrect old password", status_code=status.HTTP_400_BAD_REQUEST)
+    return user_helper.reset_password(db, user, new_password)
