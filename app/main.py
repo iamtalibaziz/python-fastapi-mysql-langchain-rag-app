@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
-from app.models import user_model
+from app.models import user_model, chat_model, chat_session_model, document_model
 from app.configs.database import engine
-from app.controllers import auth_controller, user_controller
+from app.controllers import auth_controller, user_controller, chat_controller
 from app.initial_data import create_initial_users
 from app.helpers.response_helper import internal_server_error_response
 from app.utils.logger import logger
@@ -10,6 +10,9 @@ from app.middleware.exception_handler_middleware import custom_exception_handler
 from fastapi.exceptions import RequestValidationError, HTTPException
 
 user_model.Base.metadata.create_all(bind=engine)
+chat_model.Base.metadata.create_all(bind=engine)
+chat_session_model.Base.metadata.create_all(bind=engine)
+document_model.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="FastAPI MySQL Langchain RAG App",
@@ -32,3 +35,4 @@ def on_startup():
 
 app.include_router(auth_controller.router, tags=["Auth"], prefix="/api/auth")
 app.include_router(user_controller.router, tags=["Users"], prefix="/api/users")
+app.include_router(chat_controller.router, tags=["Chat"], prefix="/api/chat")

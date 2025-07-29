@@ -16,7 +16,15 @@ def signup(user: user_schema.UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise CustomException(message="Email already registered", status_code=status.HTTP_400_BAD_REQUEST)
     new_user = auth_service.create_user(db=db, user=user)
-    return success_response(data=user_schema.User.from_orm(new_user))
+    return success_response(data=user_schema.User.from_orm(new_user), message="User created successfully. Please check your email to verify your account.")
+
+@router.get("/verify-email", response_model=response_schema.SingleResponse[dict], responses={200: {"model": response_schema.SingleResponse[dict]}, 400: {"model": response_schema.ErrorResponse}, 422: {"model": response_schema.ValidationErrorResponse}, 500: {"model": response_schema.ErrorResponse}})
+def verify_email(token: str, db: Session = Depends(get_db)):
+    user = auth_service.get_user_by_verification_token(db, token=token)
+    if not user:
+        raise CustomException(message="Invalid token", status_code=status.HTTP_400_BAD_REQUEST)
+    auth_service.verify_user(db, user)
+    return success_response(message="Email verified successfully")
 
 @router.post("/signin", response_model=response_schema.SingleResponse[user_schema.SignInResponse], responses={200: {"model": response_schema.SingleResponse[user_schema.SignInResponse]}, 400: {"model": response_schema.ErrorResponse}, 422: {"model": response_schema.ValidationErrorResponse}, 500: {"model": response_schema.ErrorResponse}})
 def signin(request: user_schema.SignInRequest, db: Session = Depends(get_db)):

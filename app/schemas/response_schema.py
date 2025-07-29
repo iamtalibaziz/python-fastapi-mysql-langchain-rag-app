@@ -27,7 +27,8 @@ class ListWithTotalResponse(BaseModel, Generic[T]):
 
 class SingleResponse(BaseModel, Generic[T]):
     success: bool = True
-    data: T
+    message: str | None = None
+    data: T | None = None
 
 class SuccessOnlyResponse(BaseModel):
     success: bool = True
