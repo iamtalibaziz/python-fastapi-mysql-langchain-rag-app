@@ -9,16 +9,19 @@ from app.schemas import user_schema
 from fastapi import UploadFile
 import os
 from sqlalchemy.orm import Session
-from app.helpers.chat_helper import save_chat_history, get_chat_history
-from app.helpers.document_helper import save_document
+from app.helpers import chat_helper, document_helper
 from langchain.schema import HumanMessage, AIMessage
+from app.utils.common_utils import clean_company_name
+from app.utils.file_system_utils import save_uploaded_file
+import time
 
 # Initialize Pinecone
 pinecone = PineconeClient(api_key=settings.PINECONE_API_KEY)
 
 def get_vector_store(company: str):
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=settings.GOOGLE_API_KEY)
-    index_name = f"rag-app-{company.lower().replace(' ', '-')}"
+    cleaned_company_name = clean_company_name(company).lower()
+    index_name = f"rag-app-{cleaned_company_name}"
     if index_name not in pinecone.list_indexes().names():
         pinecone.create_index(
             name=index_name,
@@ -52,7 +55,7 @@ async def chat_with_llm(query: str, company: str, session_id: str, db: Session, 
         response = await chain.ainvoke({"input_documents": docs, "question": query}, return_only_outputs=True)
         response_text = response["output_text"]
     else:
-        history = get_chat_history(db, session_id)
+        history = chat_helper.get_chat_history(db, session_id)
         past_messages = []
         for message in history:
             past_messages.append(f"user: {message.query}")
@@ -73,11 +76,27 @@ async def chat_with_llm(query: str, company: str, session_id: str, db: Session, 
         response = await model.ainvoke(chat_history_messages)
         response_text = response.content
         
-    chat_history = save_chat_history(db, user, session_id, company, query, response_text)
+    chat_history = chat_helper.save_chat_history(db, user, session_id, company, query, response_text)
     return chat_history
 
 async def process_and_store_document(document: UploadFile, company: str, db: Session, user: user_schema.User):
-    saved_document = save_document(db, user, company, document)
+    cleaned_name = clean_company_name(company)
+    _, file_extension = os.path.splitext(document.filename)
+    unique_filename = f"{cleaned_name}_{int(time.time())}{file_extension}"
+    file_path = os.path.join("storage", unique_filename)
+
+    save_uploaded_file(document, file_path)
+
+    saved_document = document_helper.save_document_to_db(
+        db=db,
+        user=user,
+        company=company,
+        file_name=unique_filename,
+        file_path=file_path,
+        file_type=document.content_type,
+        file_size=document.size
+    )
+
     loader = UnstructuredFileLoader(saved_document.file_path)
     pages = await loader.aload()
     vector_store, index_name = get_vector_store(company)
