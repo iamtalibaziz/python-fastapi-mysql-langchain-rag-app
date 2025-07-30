@@ -19,6 +19,7 @@ class User(BaseModel):
     email: str
     role: str
     status: str
+    is_verified: bool
 
     class Config:
         from_attributes = True

@@ -1,6 +1,6 @@
 from fastapi.responses import JSONResponse
 from fastapi import status
-def success_response(data, status_code=status.HTTP_200_OK):
+def success_response(data = None, status_code=status.HTTP_200_OK, message = None):
     # return JSONResponse(
     #     status_code=status_code,
     #     content={
@@ -10,6 +10,7 @@ def success_response(data, status_code=status.HTTP_200_OK):
     # )
     return {
         "success": True,
+        "message": message,
         "data": data
     }
 

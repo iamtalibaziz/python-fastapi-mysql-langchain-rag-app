@@ -11,5 +11,8 @@ class Settings:
     DB_PASSWORD: str = os.getenv("DB_PASSWORD")
     DB_NAME: str = os.getenv("DB_NAME")
     JWT_SECRET: str = os.getenv("JWT_SECRET")
+    PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY")
+    PINECONE_API_ENV: str = os.getenv("PINECONE_API_ENV")
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY")
 
 settings = Settings()

@@ -23,7 +23,25 @@ def get_user_by_email(db: Session, email: str):
     return user_helper.get_user_by_email(db, email)
 
 def create_user(db: Session, user: user_schema.UserCreate):
-    return user_helper.create_user(db, user)
+    new_user = user_helper.create_user(db, user)
+    send_verification_email(new_user.email, new_user.verification_token)
+    return new_user
+
+def send_verification_email(email: str, token: str):
+    # In a real application, you would use a library like `fastapi-mail`
+    # to send an email with the verification link.
+    print(f"Sending verification email to {email} with token {token}")
+    verification_link = f"http://localhost:5000/verify-email?token={token}"
+    print(f"Verification link: {verification_link}")
+
+def get_user_by_verification_token(db: Session, token: str):
+    return user_helper.get_user_by_verification_token(db, token)
+
+def verify_user(db: Session, user: user_schema.User):
+    user.is_verified = True
+    user.verification_token = None
+    db.commit()
+    return user
 
 def create_reset_token(db: Session, user: user_schema.User):
     reset_token = secrets.token_urlsafe(32)
@@ -51,6 +69,8 @@ def authenticate_user(db: Session, email: str, password: str):
         raise CustomException(message="Incorrect email or password", status_code=status.HTTP_401_UNAUTHORIZED)
     if not verify_password(password, user.hashed_password):
         raise CustomException(message="Incorrect email or password", status_code=status.HTTP_401_UNAUTHORIZED)
+    if not user.is_verified:
+        raise CustomException(message="Email not verified", status_code=status.HTTP_401_UNAUTHORIZED)
     return user
 
 def change_password(db: Session, user: user_schema.User, old_password: str, new_password: str):

@@ -14,7 +14,7 @@ def create_initial_users():
                 email="admin@example.com",
                 password="adminpassword",
             )
-            user_helper.create_user(db, user=admin_user, role="admin")
+            user_helper.create_user(db, user=admin_user, role="admin", is_system_generated=True)
 
             regular_user = user_schema.UserCreate(
                 first_name="Regular",
@@ -22,6 +22,6 @@ def create_initial_users():
                 email="user@example.com",
                 password="userpassword",
             )
-            user_helper.create_user(db, user=regular_user, role="user")
+            user_helper.create_user(db, user=regular_user, role="user", is_system_generated=True)
     finally:
         db.close()
