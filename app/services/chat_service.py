@@ -3,6 +3,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from langchain_community.document_loaders import PyPDFLoader, UnstructuredFileLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pinecone import Pinecone as PineconeClient, ServerlessSpec
 from app.configs.config import settings
 from app.schemas import user_schema
@@ -98,6 +99,10 @@ async def process_and_store_document(document: UploadFile, company: str, db: Ses
     )
 
     loader = UnstructuredFileLoader(saved_document.file_path)
-    pages = await loader.aload()
+    data = await loader.aload()
+    
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    docs = text_splitter.split_documents(data)
+
     vector_store, index_name = get_vector_store(company)
-    await vector_store.aadd_texts([p.page_content for p in pages])
+    await vector_store.aadd_texts([d.page_content for d in docs])
