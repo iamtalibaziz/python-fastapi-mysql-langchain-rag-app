@@ -1,9 +1,9 @@
-from langchain_community.vectorstores import Pinecone
+from langchain_pinecone import PineconeVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from langchain_community.document_loaders import PyPDFLoader, UnstructuredFileLoader
-from pinecone import Pinecone as PineconeClient
+from pinecone import Pinecone as PineconeClient, ServerlessSpec
 from app.configs.config import settings
 from app.schemas import user_schema
 from fastapi import UploadFile
@@ -14,14 +14,19 @@ from app.helpers.document_helper import save_document
 from langchain.schema import HumanMessage, AIMessage
 
 # Initialize Pinecone
-pinecone = PineconeClient(api_key=settings.PINECONE_API_KEY, environment=settings.PINECONE_API_ENV)
+pinecone = PineconeClient(api_key=settings.PINECONE_API_KEY)
 
 def get_vector_store(company: str):
-    embeddings = GoogleGenerativeAIEmbeddings(model="gemini-1.5-pro", google_api_key=settings.GOOGLE_API_KEY)
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=settings.GOOGLE_API_KEY)
     index_name = f"rag-app-{company.lower().replace(' ', '-')}"
     if index_name not in pinecone.list_indexes().names():
-        pinecone.create_index(name=index_name, dimension=768)
-    vector_store = Pinecone.from_existing_index(index_name, embeddings)
+        pinecone.create_index(
+            name=index_name,
+            dimension=768,
+            metric="cosine",
+            spec=ServerlessSpec(cloud="aws", region="us-east-1")
+        )
+    vector_store = PineconeVectorStore.from_existing_index(index_name, embeddings)
     return vector_store, index_name
 
 def get_conversational_chain():
@@ -34,17 +39,17 @@ def get_conversational_chain():
     Answer:
     """
 
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3, google_api_key=settings.GOOGLE_API_KEY)
+    model = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3, google_api_key=settings.GOOGLE_API_KEY)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
     return chain
 
-def chat_with_llm(query: str, company: str, session_id: str, db: Session, user: user_schema.User):
+async def chat_with_llm(query: str, company: str, session_id: str, db: Session, user: user_schema.User):
     if company:
         vector_store, _ = get_vector_store(company)
-        docs = vector_store.similarity_search(query)
+        docs = await vector_store.asimilarity_search(query)
         chain = get_conversational_chain()
-        response = chain({"input_documents": docs, "question": query}, return_only_outputs=True)
+        response = await chain.ainvoke({"input_documents": docs, "question": query}, return_only_outputs=True)
         response_text = response["output_text"]
     else:
         history = get_chat_history(db, session_id)
@@ -65,16 +70,15 @@ def chat_with_llm(query: str, company: str, session_id: str, db: Session, user: 
         # Add the latest user query
         chat_history_messages.append(HumanMessage(content=query))
 
-        response = model.invoke(chat_history_messages)
+        response = await model.ainvoke(chat_history_messages)
         response_text = response.content
         
     chat_history = save_chat_history(db, user, session_id, company, query, response_text)
     return chat_history
 
-def process_and_store_document(document: UploadFile, company: str, db: Session, user: user_schema.User):
+async def process_and_store_document(document: UploadFile, company: str, db: Session, user: user_schema.User):
     saved_document = save_document(db, user, company, document)
     loader = UnstructuredFileLoader(saved_document.file_path)
-    pages = loader.load_and_split()
+    pages = await loader.aload()
     vector_store, index_name = get_vector_store(company)
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=settings.GOOGLE_API_KEY)
-    Pinecone.from_texts([p.page_content for p in pages], embeddings, index_name=index_name)
+    await vector_store.aadd_texts([p.page_content for p in pages])
