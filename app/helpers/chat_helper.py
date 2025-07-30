@@ -18,7 +18,7 @@ def save_chat_history(db: Session, user: user_schema.User, session_id: str, comp
 
     chat_history = ChatHistory(
         user_id=user.id,
-        session_id=chat_session.id,
+        session_id=session_id,
         query=query,
         response=response
     )
@@ -28,7 +28,4 @@ def save_chat_history(db: Session, user: user_schema.User, session_id: str, comp
     return chat_history
 
 def get_chat_history(db: Session, session_id: str):
-    chat_session = db.query(ChatSession).filter(ChatSession.session_id == session_id).first()
-    if not chat_session:
-        return []
-    return db.query(ChatHistory).filter(ChatHistory.session_id == chat_session.id).all()
+    return db.query(ChatHistory).filter(ChatHistory.session_id == session_id).all()

@@ -14,4 +14,3 @@ class ChatSession(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     user = relationship("User")
-    chat_history = relationship("ChatHistory", back_populates="session")
