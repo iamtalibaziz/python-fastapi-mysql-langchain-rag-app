@@ -106,3 +106,12 @@ async def process_and_store_document(document: UploadFile, company: str, db: Ses
 
     vector_store, index_name = get_vector_store(company)
     await vector_store.aadd_texts([d.page_content for d in docs])
+
+def get_chat_sessions(db: Session, user: user_schema.User):
+    return chat_helper.get_chat_sessions_by_user(db, user.id)
+
+def get_chat_history_by_session(db: Session, session_id: str, user: user_schema.User):
+    chat_session = chat_helper.get_chat_session_by_session_id_and_user(db, session_id, user.id)
+    if not chat_session:
+        return []
+    return chat_helper.get_chat_history(db, session_id)

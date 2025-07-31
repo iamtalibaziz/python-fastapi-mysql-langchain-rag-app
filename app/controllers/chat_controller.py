@@ -5,7 +5,7 @@ from app.services import chat_service
 from app.configs.database import get_db
 from app.helpers.response_helper import success_response
 from app.middleware.verify_access_token import verify_access_token
-from typing import Optional
+from typing import Optional, List
 import uuid
 from app.helpers.exceptions import CustomException
 
@@ -29,3 +29,13 @@ async def upload_document(company: str, document_url: Optional[str] = None, file
         raise CustomException(message="URL document processing not implemented yet", status_code=status.HTTP_501_NOT_IMPLEMENTED)
         
     return success_response(data={"message": "Document processed and stored successfully"})
+
+@router.get("/sessions", response_model=response_schema.ListResponse[chat_schema.ChatSessionResponse])
+async def get_chat_sessions(db: Session = Depends(get_db), current_user: user_schema.User = Depends(verify_access_token)):
+    sessions = chat_service.get_chat_sessions(db, current_user)
+    return success_response(data=sessions)
+
+@router.get("/sessions/{session_id}/history", response_model=response_schema.ListResponse[chat_schema.ChatResponse])
+async def get_chat_history_by_session(session_id: str, db: Session = Depends(get_db), current_user: user_schema.User = Depends(verify_access_token)):
+    history = chat_service.get_chat_history_by_session(db, session_id, current_user)
+    return success_response(data=history)
