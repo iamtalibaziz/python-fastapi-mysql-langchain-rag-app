@@ -1,3 +1,5 @@
+import asyncio
+import platform
 from fastapi import FastAPI, Request
 from app.models import user_model, chat_model, chat_session_model, document_model
 from app.configs.database import engine
@@ -13,6 +15,10 @@ user_model.Base.metadata.create_all(bind=engine)
 chat_model.Base.metadata.create_all(bind=engine)
 chat_session_model.Base.metadata.create_all(bind=engine)
 document_model.Base.metadata.create_all(bind=engine)
+
+# Fix for RuntimeError: There is no current event loop in thread 'AnyIO worker thread'.
+if platform.system() == "Windows":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 app = FastAPI(
     title="FastAPI MySQL Langchain RAG App",

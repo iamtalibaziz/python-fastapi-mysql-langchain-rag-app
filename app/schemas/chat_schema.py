@@ -13,7 +13,7 @@ class UploadDocumentRequest(BaseModel):
 class ChatResponse(BaseModel):
     id: int
     user_id: int
-    session_id: int
+    session_id: str
     query: str
     response: str
 
