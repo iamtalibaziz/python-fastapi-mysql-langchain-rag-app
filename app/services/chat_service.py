@@ -98,7 +98,11 @@ async def process_and_store_document(document: UploadFile, company: str, db: Ses
         file_size=document.size
     )
 
-    loader = UnstructuredFileLoader(saved_document.file_path)
+    if file_extension.lower() == ".pdf":
+        loader = PyPDFLoader(saved_document.file_path)
+    else:
+        loader = UnstructuredFileLoader(saved_document.file_path)
+        
     data = await loader.aload()
     
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)

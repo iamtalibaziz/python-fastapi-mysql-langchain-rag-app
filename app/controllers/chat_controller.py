@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, UploadFile, File
+from fastapi import APIRouter, Depends, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.schemas import user_schema, response_schema, chat_schema
 from app.services import chat_service
@@ -18,11 +18,15 @@ async def chat_with_llm(request: chat_schema.ChatRequest, db: Session = Depends(
     return success_response(data=response)
 
 @router.post("/upload-document", response_model=response_schema.SingleResponse[dict])
-async def upload_document(company: str, document_url: Optional[str] = None, file: Optional[UploadFile] = File(None), db: Session = Depends(get_db), current_user: user_schema.User = Depends(verify_access_token)):
+async def upload_document(company: str = Form(...), document_url: Optional[str] = Form(None), file: Optional[UploadFile] = File(None), db: Session = Depends(get_db), current_user: user_schema.User = Depends(verify_access_token)):
     if not document_url and not file:
         raise CustomException(message="Either document_url or file must be provided", status_code=status.HTTP_400_BAD_REQUEST)
     
     if file:
+        allowed_extensions = {".pdf", ".docx"}
+        file_extension = "".join(file.filename.split(".")[-1:])
+        if f".{file_extension.lower()}" not in allowed_extensions:
+            raise CustomException(message="Only .pdf and .docx files are allowed", status_code=status.HTTP_400_BAD_REQUEST)
         await chat_service.process_and_store_document(file, company, db, current_user)
     else:
         # This part needs to be adapted to handle URL downloads and saving
