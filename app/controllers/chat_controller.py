@@ -5,9 +5,19 @@ from app.services import chat_service
 from app.configs.database import get_db
 from app.helpers.response_helper import success_response
 from app.middleware.verify_access_token import verify_access_token
-from typing import Optional, List
+from typing import Optional, List, Union
 import uuid
 from app.helpers.exceptions import CustomException
+
+
+def get_optional_file(file: Optional[Union[UploadFile, str]] = File(None)) -> Optional[UploadFile]:
+    """
+    Handles cases where an empty file is sent as a string instead of a file.
+    """
+    if isinstance(file, str):
+        return None
+    return file
+
 
 router = APIRouter()
 
@@ -18,7 +28,7 @@ async def chat_with_llm(request: chat_schema.ChatRequest, db: Session = Depends(
     return success_response(data=response)
 
 @router.post("/upload-document", response_model=response_schema.SingleResponse[dict])
-async def upload_document(company: str = Form(...), document_url: Optional[str] = Form(None), file: Optional[UploadFile] = File(None), db: Session = Depends(get_db), current_user: user_schema.User = Depends(verify_access_token)):
+async def upload_document(company: str = Form(...), document_url: Optional[str] = Form(None), file: Optional[UploadFile] = Depends(get_optional_file), db: Session = Depends(get_db), current_user: user_schema.User = Depends(verify_access_token)):
     if not document_url and not file:
         raise CustomException(message="Either document_url or file must be provided", status_code=status.HTTP_400_BAD_REQUEST)
     
@@ -28,9 +38,8 @@ async def upload_document(company: str = Form(...), document_url: Optional[str] 
         if f".{file_extension.lower()}" not in allowed_extensions:
             raise CustomException(message="Only .pdf and .docx files are allowed", status_code=status.HTTP_400_BAD_REQUEST)
         await chat_service.process_and_store_document(file, company, db, current_user)
-    else:
-        # This part needs to be adapted to handle URL downloads and saving
-        raise CustomException(message="URL document processing not implemented yet", status_code=status.HTTP_501_NOT_IMPLEMENTED)
+    elif document_url:
+        await chat_service.process_and_store_document_from_url(document_url, company, db, current_user)
         
     return success_response(data={"message": "Document processed and stored successfully"})
 
