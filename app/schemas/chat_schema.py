@@ -19,3 +19,13 @@ class ChatResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class ChatSessionResponse(BaseModel):
+    id: int
+    session_id: str
+    user_id: int
+    company_name: Optional[str] = None
+    title: str
+
+    class Config:
+        orm_mode = True

@@ -29,3 +29,9 @@ def save_chat_history(db: Session, user: user_schema.User, session_id: str, comp
 
 def get_chat_history(db: Session, session_id: str):
     return db.query(ChatHistory).filter(ChatHistory.session_id == session_id).all()
+
+def get_chat_sessions_by_user(db: Session, user_id: int):
+    return db.query(ChatSession).filter(ChatSession.user_id == user_id).all()
+
+def get_chat_session_by_session_id_and_user(db: Session, session_id: str, user_id: int):
+    return db.query(ChatSession).filter(ChatSession.session_id == session_id, ChatSession.user_id == user_id).first()
